@@ -1,33 +1,54 @@
 <%
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const keyQuery = query.key ? `?key=${encodeURIComponent(query.key)}` : '';
+  const rows = (list || []).map((endpoint) => `
+    <tr>
+      <td>${escapeHtml(endpoint.name || endpoint.id)}</td>
+      <td><code>${escapeHtml(endpoint.method)}</code></td>
+      <td><code>${escapeHtml(endpoint.path)}</code></td>
+      <td>${endpoint.enabled ? '<span class="success">Enabled</span>' : '<span class="muted">Disabled</span>'}</td>
+      <td class="right">
+        <a class="secondary" href="/admin/${encodeURIComponent(endpoint.id)}/edit${keyQuery}">Edit</a>
+        <a class="secondary" href="/admin/${encodeURIComponent(endpoint.id)}/vars${keyQuery}">Vars</a>
+        <a class="secondary" href="/admin/${encodeURIComponent(endpoint.id)}/logs${keyQuery}">Logs</a>
+      </td>
+    </tr>
+  `).join('');
+
   const body = `
     <section>
-      <h2>Registered Routes</h2>
-      <p>This is a starter administration page that lists routes stored in the SQLite database.</p>
+      <header class="flex" style="justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div>
+          <h2 style="margin-bottom: 0.25rem;">Mock Endpoints</h2>
+          <p class="muted" style="margin: 0;">Create and manage mock API responses. Attach <code>?key=${escapeHtml(query.key || '')}</code> to links to stay authenticated.</p>
+        </div>
+        <a class="button" href="/admin/new${keyQuery}">+ New Endpoint</a>
+      </header>
       <table role="grid">
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Name</th>
             <th>Method</th>
             <th>Path</th>
-            <th>Description</th>
+            <th>Status</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          ${routes.length === 0 ? `
+          ${rows || `
             <tr>
-              <td colspan="4">No routes have been created yet.</td>
+              <td colspan="5" class="muted">No endpoints yet. Create one to get started.</td>
             </tr>
-          ` : routes.map((route) => `
-            <tr>
-              <td>${route.id}</td>
-              <td>${route.method}</td>
-              <td>${route.path}</td>
-              <td>${route.description || ''}</td>
-            </tr>
-          `).join('')}
+          `}
         </tbody>
       </table>
     </section>
   `;
 %>
-<%- include('layout', { title, body }) %>
+<%- include('layout', { title: 'Mock API Admin', body }) %>

@@ -1,25 +1,41 @@
-<% layout('layout', { base: '' }) %>
-<h4>Logs for <code><%= e.method %> <%= e.path %></code></h4>
-<p>
-  <a href="/admin/<%= e.id %>?key=<%= encodeURIComponent(query.key||'') %>">Edit</a> ·
-  <a href="/admin/<%= e.id %>/vars?key=<%= encodeURIComponent(query.key||'') %>">Vars</a>
-</p>
-<table>
-  <thead>
-    <tr><th>When</th><th>Status</th><th>ms</th><th>Method</th><th>Path</th><th></th></tr>
-  </thead>
-  <tbody>
-    <% for (const L of logs) { %>
-      <tr>
-        <td><%= L.created_at %></td>
-        <td><%= L.status %></td>
-        <td><%= L.response_ms %></td>
-        <td><%= L.method %></td>
-        <td><code><%= L.path %></code></td>
-        <td class="right">
-          <a class="button button-outline" href="/admin/logs/<%= L.id %>?key=<%= encodeURIComponent(query.key||'') %>">View</a>
-        </td>
-      </tr>
-    <% } %>
-  </tbody>
-</table>
+<%
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const keyQuery = query.key ? `?key=${encodeURIComponent(query.key)}` : '';
+  const rows = (logs || []).map((log) => `
+    <tr>
+      <td>${escapeHtml(log.created_at)}</td>
+      <td>${escapeHtml(log.status)}</td>
+      <td>${escapeHtml(log.response_ms)}</td>
+      <td>${escapeHtml(log.method)}</td>
+      <td><code>${escapeHtml(log.path)}</code></td>
+      <td class="right"><a class="secondary" href="/admin/logs/${encodeURIComponent(log.id)}${keyQuery}">View</a></td>
+    </tr>
+  `).join('');
+
+  const body = `
+    <section>
+      <header class="flex" style="justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div>
+          <h2 style="margin-bottom: 0.25rem;">Logs for <code>${escapeHtml(e.method)} ${escapeHtml(e.path)}</code></h2>
+          <p class="muted" style="margin: 0;">Inspect the most recent requests handled by this endpoint.</p>
+        </div>
+        <a class="secondary" href="/admin/${encodeURIComponent(e.id)}${keyQuery}">Back to endpoint</a>
+      </header>
+      <table>
+        <thead>
+          <tr><th>When</th><th>Status</th><th>ms</th><th>Method</th><th>Path</th><th></th></tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td colspan="6" class="muted">No logs captured yet.</td></tr>`}
+        </tbody>
+      </table>
+    </section>
+  `;
+%>
+<%- include('layout', { title: `Logs · ${e.method} ${e.path}`, body }) %>

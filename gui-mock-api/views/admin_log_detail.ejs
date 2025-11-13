@@ -1,14 +1,44 @@
-<% layout('layout', { base: '' }) %>
-<h4>Log <code><%= log.id %></code></h4>
-<p class="muted"><strong>When:</strong> <%= log.created_at %> · <strong>Status:</strong> <%= log.status %> · <strong>ms:</strong> <%= log.response_ms %></p>
-<details open><summary><strong>Request</strong></summary>
-  <pre class="code"><%= log.method %> <%= log.path %></pre>
-  <h5>Params</h5>
-  <pre class="code"><%- JSON.stringify(JSON.parse(log.matched_params||'{}'), null, 2) %></pre>
-  <h5>Query</h5>
-  <pre class="code"><%- JSON.stringify(JSON.parse(log.query||'{}'), null, 2) %></pre>
-  <h5>Headers</h5>
-  <pre class="code"><%- JSON.stringify(JSON.parse(log.headers||'{}'), null, 2) %></pre>
-  <h5>Body</h5>
-  <pre class="code"><%- JSON.stringify(JSON.parse(log.body||'{}'), null, 2) %></pre>
-</details>
+<%
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const pretty = (raw, fallback = '{}') => {
+    try {
+      const parsed = JSON.parse(raw || fallback);
+      return escapeHtml(JSON.stringify(parsed, null, 2));
+    } catch (err) {
+      return escapeHtml(String(raw ?? ''));
+    }
+  };
+
+  const keyQuery = query.key ? `?key=${encodeURIComponent(query.key)}` : '';
+
+  const body = `
+    <section>
+      <header class="flex" style="justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div>
+          <h2 style="margin-bottom: 0.25rem;">Log ${escapeHtml(log.id)}</h2>
+          <p class="muted" style="margin: 0;">Captured at ${escapeHtml(log.created_at)} &middot; Status ${escapeHtml(log.status)} &middot; ${escapeHtml(log.response_ms)} ms</p>
+        </div>
+        <a class="secondary" href="/admin/${encodeURIComponent(log.endpoint_id || '')}/logs${keyQuery}">Back to logs</a>
+      </header>
+      <article>
+        <h3>Request</h3>
+        <pre><code>${escapeHtml(`${log.method} ${log.path}`)}</code></pre>
+        <h4>Params</h4>
+        <pre><code>${pretty(log.matched_params)}</code></pre>
+        <h4>Query</h4>
+        <pre><code>${pretty(log.query)}</code></pre>
+        <h4>Headers</h4>
+        <pre><code>${pretty(log.headers)}</code></pre>
+        <h4>Body</h4>
+        <pre><code>${pretty(log.body, 'null')}</code></pre>
+      </article>
+    </section>
+  `;
+%>
+<%- include('layout', { title: `Log ${log.id}`, body }) %>

@@ -1,27 +1,26 @@
-const handlebars = require('handlebars');
+import Handlebars from 'handlebars';
 
 const templateCache = new Map();
 
 function compileTemplate(source) {
-  if (!source) {
+  const key = String(source ?? '');
+  if (!key) {
     return () => '';
   }
 
-  if (templateCache.has(source)) {
-    return templateCache.get(source);
+  if (!templateCache.has(key)) {
+    templateCache.set(key, Handlebars.compile(key));
   }
 
-  const compiled = handlebars.compile(source);
-  templateCache.set(source, compiled);
-  return compiled;
+  return templateCache.get(key);
 }
 
-function renderTemplate(source, data) {
+export function renderTemplate(source, data) {
   const template = compileTemplate(source);
   return template(data || {});
 }
 
-module.exports = {
+export default {
   compileTemplate,
   renderTemplate
 };

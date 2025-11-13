@@ -10,8 +10,8 @@
       <h1><%= title || 'GUI Mock API' %></h1>
       <nav>
         <ul>
-          <li><a href="/admin">Routes</a></li>
-          <li><a href="/admin/new">Create Route</a></li>
+          <li><a href="/admin<%= adminKey ? `?key=${encodeURIComponent(adminKey)}` : '' %>">Routes</a></li>
+          <li><a href="/admin/new<%= adminKey ? `?key=${encodeURIComponent(adminKey)}` : '' %>">Create Endpoint</a></li>
         </ul>
       </nav>
     </header>
