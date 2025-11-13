@@ -158,8 +158,8 @@
               <span>Format response as JSON<br><small class="muted">We’ll validate the JSON for you before saving.</small></span>
             </label>
             <label class="checkbox">
-              <input type="checkbox" name="template_enabled" value="true" ${currentEndpoint.template_enabled ? 'checked' : ''} />
-              <span>Use Handlebars placeholders<br><small class="muted">Great when you want to insert dynamic values from Vars.</small></span>
+              <input type="checkbox" name="template_enabled" value="true" ${currentEndpoint.template_enabled ? 'checked' : ''} data-template-toggle />
+              <span>Use Handlebars placeholders<br><small class="muted" data-template-hint>Great when you want to insert dynamic values from Vars. We’ll automatically enable this when we detect <code>{{...}}</code> placeholders in your response.</small></span>
             </label>
           </div>
         </fieldset>
