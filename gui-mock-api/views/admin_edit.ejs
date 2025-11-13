@@ -1,30 +1,94 @@
 <%
-  const routeData = route || { method: 'GET', path: '/', response: '{}' };
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const currentEndpoint = route || endpoint || {};
+  const keyQuery = query.key ? `?key=${encodeURIComponent(query.key)}` : '';
+  const formAction = `/admin/save${keyQuery}`;
+  const deleteAction = currentEndpoint.id ? `/admin/${encodeURIComponent(currentEndpoint.id)}/delete${keyQuery}` : '';
+  const varsLink = currentEndpoint.id ? `/admin/${encodeURIComponent(currentEndpoint.id)}/vars${keyQuery}` : '';
+  const logsLink = currentEndpoint.id ? `/admin/${encodeURIComponent(currentEndpoint.id)}/logs${keyQuery}` : '';
+
   const body = `
     <section>
-      <h2>${title}</h2>
-      ${error ? `<article class="error">${error.message || error}</article>` : ''}
-      <form id="route-form" method="post" action="/api/routes">
-        <input type="hidden" name="id" value="${routeData.id || ''}" />
+      <header class="flex" style="justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div>
+          <h2 style="margin-bottom: 0.25rem;">${escapeHtml(title || 'Endpoint')}</h2>
+          <p class="muted" style="margin: 0;">Define how this endpoint should respond to incoming requests.</p>
+        </div>
+        <div class="flex" style="gap: 0.5rem;">
+          <a class="secondary" href="/admin${keyQuery}">Back to list</a>
+          ${currentEndpoint.id ? `<a class="secondary" href="${varsLink}">Vars</a>` : ''}
+          ${currentEndpoint.id ? `<a class="secondary" href="${logsLink}">Logs</a>` : ''}
+        </div>
+      </header>
+      <form method="post" action="${formAction}" class="grid" style="gap: 1rem;">
+        <input type="hidden" name="id" value="${escapeHtml(currentEndpoint.id || '')}" />
         <label>
-          Method
-          <input name="method" required value="${routeData.method}" />
-        </label>
-        <label>
-          Path
-          <input name="path" required value="${routeData.path}" />
+          Name
+          <input name="name" placeholder="Catalog Lookup" value="${escapeHtml(currentEndpoint.name || '')}" />
         </label>
         <label>
           Description
-          <input name="description" value="${routeData.description || ''}" />
+          <input name="description" placeholder="Optional notes" value="${escapeHtml(currentEndpoint.description || '')}" />
+        </label>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+          <label>
+            Method
+            <input name="method" required value="${escapeHtml(currentEndpoint.method || 'GET')}" />
+          </label>
+          <label>
+            Path
+            <input name="path" required value="${escapeHtml(currentEndpoint.path || '/')}" />
+          </label>
+          <label>
+            Status Code
+            <input type="number" name="response_status" value="${escapeHtml(currentEndpoint.response_status ?? 200)}" />
+          </label>
+          <label>
+            Delay (ms)
+            <input type="number" min="0" name="response_delay_ms" value="${escapeHtml(currentEndpoint.response_delay_ms ?? 0)}" />
+          </label>
+        </div>
+        <fieldset>
+          <legend>Response Options</legend>
+          <label class="checkbox">
+            <input type="checkbox" name="enabled" value="true" ${currentEndpoint.enabled !== false ? 'checked' : ''} />
+            Enable endpoint
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="response_is_json" value="true" ${currentEndpoint.response_is_json ? 'checked' : ''} />
+            Treat body as JSON
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="template_enabled" value="true" ${currentEndpoint.template_enabled ? 'checked' : ''} />
+            Render body with Handlebars templates
+          </label>
+        </fieldset>
+        <label>
+          Match Headers (JSON)
+          <textarea data-json-field name="match_headers" rows="3" placeholder='{"x-api-version":"1"}'>${escapeHtml(currentEndpoint.match_headers || '{}')}</textarea>
         </label>
         <label>
-          Response JSON
-          <textarea name="response" rows="6" required>${routeData.response}</textarea>
+          Response Headers (JSON)
+          <textarea data-json-field name="response_headers" rows="3" placeholder='{"Content-Type":"application/json"}'>${escapeHtml(currentEndpoint.response_headers || '{}')}</textarea>
         </label>
-        <button type="submit">Save</button>
+        <label>
+          Response Body
+          <textarea name="response_body" rows="10" placeholder='{"message":"ok"}'>${escapeHtml(currentEndpoint.response_body || '')}</textarea>
+        </label>
+        <button type="submit" class="button primary">Save Endpoint</button>
       </form>
+      ${currentEndpoint.id ? `
+        <form method="post" action="${deleteAction}" onsubmit="return confirm('Delete this endpoint?');" style="margin-top: 1rem;">
+          <button class="contrast" type="submit">Delete Endpoint</button>
+        </form>
+      ` : ''}
     </section>
   `;
 %>
-<%- include('layout', { title, body }) %>
+<%- include('layout', { title: title || 'Endpoint', body }) %>

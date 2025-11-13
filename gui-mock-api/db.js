@@ -14,10 +14,18 @@ db.pragma('foreign_keys = ON');
 db.exec(`
 CREATE TABLE IF NOT EXISTS endpoints (
   id TEXT PRIMARY KEY,
+  name TEXT DEFAULT '',
+  description TEXT DEFAULT '',
   method TEXT NOT NULL,
   path TEXT NOT NULL,
-  response TEXT NOT NULL,
-  description TEXT DEFAULT '',
+  enabled INTEGER DEFAULT 1,
+  match_headers TEXT DEFAULT '{}',
+  response_status INTEGER DEFAULT 200,
+  response_headers TEXT DEFAULT '{}',
+  response_body TEXT DEFAULT '',
+  response_is_json INTEGER DEFAULT 0,
+  response_delay_ms INTEGER DEFAULT 0,
+  template_enabled INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now')),
   UNIQUE(method, path)
@@ -40,10 +48,10 @@ CREATE TABLE IF NOT EXISTS api_logs (
   endpoint_id TEXT,
   method TEXT,
   path TEXT,
-  matched_params TEXT, -- JSON
-  query TEXT,          -- JSON
-  headers TEXT,        -- JSON
-  body TEXT,           -- JSON
+  matched_params TEXT,
+  query TEXT,
+  headers TEXT,
+  body TEXT,
   status INTEGER,
   response_ms INTEGER,
   created_at TEXT DEFAULT (datetime('now')),
@@ -51,34 +59,82 @@ CREATE TABLE IF NOT EXISTS api_logs (
 );
 `);
 
-export function getAllRoutes() {
-  return db.prepare('SELECT id, method, path, response, description FROM endpoints ORDER BY path ASC').all();
+function normalizeEndpoint(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    response_status: Number(row.response_status ?? 200),
+    response_delay_ms: Number(row.response_delay_ms ?? 0),
+    enabled: Boolean(row.enabled),
+    response_is_json: Boolean(row.response_is_json),
+    template_enabled: Boolean(row.template_enabled)
+  };
 }
 
-export function saveRoute(route) {
+export function allEndpoints() {
+  const rows = db.prepare(`
+    SELECT * FROM endpoints
+    ORDER BY path ASC, method ASC
+  `).all();
+  return rows.map(normalizeEndpoint);
+}
+
+export function getEndpoint(id) {
+  const row = db.prepare('SELECT * FROM endpoints WHERE id = ?').get(id);
+  return normalizeEndpoint(row);
+}
+
+export function upsertEndpoint(route) {
   const now = new Date().toISOString();
   const record = {
     id: route.id,
-    method: route.method,
-    path: route.path,
-    response: route.response,
+    name: route.name || '',
     description: route.description || '',
+    method: route.method || 'GET',
+    path: route.path || '/',
+    enabled: route.enabled ? 1 : 0,
+    match_headers: route.match_headers || '{}',
+    response_status: Number.isFinite(route.response_status) ? Number(route.response_status) : 200,
+    response_headers: route.response_headers || '{}',
+    response_body: route.response_body ?? '',
+    response_is_json: route.response_is_json ? 1 : 0,
+    response_delay_ms: Number.isFinite(route.response_delay_ms) ? Number(route.response_delay_ms) : 0,
+    template_enabled: route.template_enabled ? 1 : 0,
     created_at: route.created_at || now,
     updated_at: now
   };
 
-  db.prepare(
-    `INSERT INTO endpoints (id, method, path, response, description, created_at, updated_at)
-     VALUES (@id, @method, @path, @response, @description, @created_at, @updated_at)
-     ON CONFLICT(id) DO UPDATE SET
-       method = excluded.method,
-       path = excluded.path,
-       response = excluded.response,
-       description = excluded.description,
-       updated_at = excluded.updated_at`
-  ).run(record);
+  db.prepare(`
+    INSERT INTO endpoints (
+      id, name, description, method, path, enabled, match_headers,
+      response_status, response_headers, response_body, response_is_json,
+      response_delay_ms, template_enabled, created_at, updated_at
+    ) VALUES (
+      @id, @name, @description, @method, @path, @enabled, @match_headers,
+      @response_status, @response_headers, @response_body, @response_is_json,
+      @response_delay_ms, @template_enabled, @created_at, @updated_at
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      description = excluded.description,
+      method = excluded.method,
+      path = excluded.path,
+      enabled = excluded.enabled,
+      match_headers = excluded.match_headers,
+      response_status = excluded.response_status,
+      response_headers = excluded.response_headers,
+      response_body = excluded.response_body,
+      response_is_json = excluded.response_is_json,
+      response_delay_ms = excluded.response_delay_ms,
+      template_enabled = excluded.template_enabled,
+      updated_at = excluded.updated_at
+  `).run(record);
 
-  return record;
+  return normalizeEndpoint(record);
+}
+
+export function deleteEndpoint(id) {
+  db.prepare('DELETE FROM endpoints WHERE id = ?').run(id);
 }
 
 export function listVars(endpointId) {
@@ -124,8 +180,10 @@ export function getLog(id) {
 
 export default {
   db,
-  getAllRoutes,
-  saveRoute,
+  allEndpoints,
+  getEndpoint,
+  upsertEndpoint,
+  deleteEndpoint,
   listVars,
   getVarByKey,
   upsertVar,

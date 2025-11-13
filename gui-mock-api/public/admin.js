@@ -1,30 +1,19 @@
 (function () {
-  const form = document.querySelector('#route-form');
-  if (!form) {
-    return;
-  }
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const formData = new FormData(form);
-    const payload = Object.fromEntries(formData.entries());
-
-    try {
-      const response = await fetch('/api/routes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save route');
+  const jsonFields = document.querySelectorAll('textarea[data-json-field]');
+  for (const field of jsonFields) {
+    field.addEventListener('blur', () => {
+      const value = field.value.trim();
+      if (!value) {
+        return;
       }
-
-      window.location.href = '/admin';
-    } catch (error) {
-      alert(error.message);
-    }
-  });
+      try {
+        const parsed = JSON.parse(value);
+        field.value = JSON.stringify(parsed, null, 2);
+        field.setCustomValidity('');
+      } catch (err) {
+        field.setCustomValidity('Invalid JSON');
+      }
+    });
+    field.addEventListener('input', () => field.setCustomValidity(''));
+  }
 })();
