@@ -43,16 +43,26 @@ function requireAdmin(req, res, next) {
     return next();
   }
 
-  const provided = req.query.key || req.get('x-admin-key');
+  const provided = req.query.key || req.get('x-admin-key') || req.body?.key;
   if (provided && provided === ADMIN_KEY) {
     res.locals.adminKey = provided;
     return next();
   }
 
-  if (req.accepts('json')) {
+  if (req.accepts('json') && !req.accepts('html')) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  return res.status(401).send('Unauthorized');
+
+  const params = new URLSearchParams();
+  if (req.originalUrl) {
+    params.set('next', req.originalUrl);
+  }
+  if (provided && provided !== ADMIN_KEY) {
+    params.set('error', '1');
+  }
+
+  const redirectTarget = `/admin/login${params.toString() ? `?${params.toString()}` : ''}`;
+  return res.redirect(redirectTarget);
 }
 
 function endpointDefaults() {
@@ -80,6 +90,72 @@ function persistAdminKey(req) {
 
 app.get('/', (req, res) => {
   res.redirect('/admin');
+});
+
+function resolveNextPath(rawNext = '/admin') {
+  if (typeof rawNext !== 'string' || !rawNext.startsWith('/')) {
+    return '/admin';
+  }
+  try {
+    const url = new URL(rawNext, 'http://example.com');
+    url.searchParams.delete('key');
+    return `${url.pathname}${url.search}${url.hash}` || '/admin';
+  } catch (err) {
+    return '/admin';
+  }
+}
+
+function appendKeyToPath(pathname, key) {
+  if (!pathname) return `/admin?key=${encodeURIComponent(key)}`;
+  const url = new URL(pathname, 'http://example.com');
+  url.searchParams.set('key', key);
+  const search = url.search ? url.search : '?key=' + encodeURIComponent(key);
+  return `${url.pathname}${search}${url.hash}`;
+}
+
+app.get('/admin/login', (req, res) => {
+  if (!ADMIN_KEY) {
+    return res.redirect('/admin');
+  }
+
+  const nextPath = resolveNextPath(req.query.next);
+  const hasError = req.query.error === '1';
+  res.status(hasError ? 401 : 200).render('admin_login', {
+    title: 'Admin Login',
+    errorMessage: hasError ? 'Invalid admin key provided.' : '',
+    nextPath,
+    query: req.query
+  });
+});
+
+app.post('/admin/login', (req, res) => {
+  if (!ADMIN_KEY) {
+    return res.redirect('/admin');
+  }
+
+  const key = String(req.body?.key || '').trim();
+  const nextPath = resolveNextPath(req.body?.next);
+
+  if (!key) {
+    return res.status(401).render('admin_login', {
+      title: 'Admin Login',
+      errorMessage: 'Admin key is required.',
+      nextPath,
+      query: req.query
+    });
+  }
+
+  if (key !== ADMIN_KEY) {
+    return res.status(401).render('admin_login', {
+      title: 'Admin Login',
+      errorMessage: 'Invalid admin key provided.',
+      nextPath,
+      query: req.query
+    });
+  }
+
+  const redirectPath = appendKeyToPath(nextPath || '/admin', key);
+  return res.redirect(redirectPath);
 });
 
 app.get('/admin', requireAdmin, (req, res) => {
