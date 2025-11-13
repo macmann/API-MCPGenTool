@@ -77,8 +77,11 @@ This app can run on **Render Free Web Service**. On the free tier:
 
 Your URLs will look like:
 
-- Admin UI: `https://<your-service>.onrender.com/admin?key=<ADMIN_KEY>`
+- Admin UI: `https://<your-service>.onrender.com/admin`
+- Admin Login: `https://<your-service>.onrender.com/admin/login`
 - Mock API base: `https://<your-service>.onrender.com`
+
+> ℹ️ When the admin key is set, visiting `/admin` without it will redirect to the login screen. Enter the configured key to be redirected back to the dashboard. If you prefer to skip the form you can still append `?key=<ADMIN_KEY>` manually.
 
 > ⚠ On the free tier, any endpoints and variables you create are stored in the local SQLite file. When the service redeploys or restarts, that file can be reset and you will lose data.
 

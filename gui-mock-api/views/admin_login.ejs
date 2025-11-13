@@ -1,0 +1,21 @@
+<%
+  const escapeAttr = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const body = `
+    <article>
+      <h2>Sign in to the Admin Dashboard</h2>
+      ${errorMessage ? `<p role="alert" class="contrast">⚠️ ${escapeAttr(errorMessage)}</p>` : '<p>Enter the admin key that was configured during deployment to continue.</p>'}
+      <form method="post" action="/admin/login">
+        <label for="admin-key">Admin Key</label>
+        <input id="admin-key" name="key" type="password" required autofocus />
+        <input type="hidden" name="next" value="${escapeAttr(nextPath)}" />
+        <button type="submit">Continue</button>
+      </form>
+    </article>
+  `;
+%>
+<%- include('layout', { title: title || 'Admin Login', body }) %>
