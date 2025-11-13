@@ -81,6 +81,57 @@
   const responseBodyField = document.querySelector('[data-response-body]');
   const responseHeadersField = document.querySelector('[data-response-headers]');
   const responseJsonCheckbox = document.querySelector('[data-response-json]');
+  const templateCheckbox = document.querySelector('[data-template-toggle]');
+  const templateHint = document.querySelector('[data-template-hint]');
+  const templateHintDefault = templateHint ? templateHint.textContent : '';
+  const placeholderRegex = /{{\s*[^{}]+\s*}}/;
+  let templateManuallyDisabled = false;
+
+  const setTemplateHint = (message) => {
+    if (!templateHint) return;
+    templateHint.textContent = message;
+  };
+
+  const syncTemplateCheckbox = () => {
+    if (!templateCheckbox || !responseBodyField) return;
+    const text = responseBodyField.value || '';
+    const hasPlaceholders = placeholderRegex.test(text);
+
+    if (hasPlaceholders && !templateCheckbox.checked && !templateManuallyDisabled) {
+      templateCheckbox.checked = true;
+      setTemplateHint('Detected {{...}} placeholders, so templating was enabled automatically.');
+    } else if (hasPlaceholders && templateManuallyDisabled) {
+      setTemplateHint('Placeholders detected. Enable templating so values like {{userid.name}} are replaced in responses.');
+    } else if (!hasPlaceholders) {
+      templateManuallyDisabled = false;
+      setTemplateHint(templateHintDefault);
+    }
+  };
+
+  if (templateCheckbox && responseBodyField) {
+    syncTemplateCheckbox();
+
+    responseBodyField.addEventListener('input', () => {
+      syncTemplateCheckbox();
+    });
+    responseBodyField.addEventListener('blur', () => {
+      syncTemplateCheckbox();
+    });
+
+    templateCheckbox.addEventListener('change', () => {
+      if (!templateCheckbox.checked) {
+        templateManuallyDisabled = true;
+        if (placeholderRegex.test(responseBodyField.value || '')) {
+          setTemplateHint('Placeholders detected. Enable templating so values like {{userid.name}} are replaced in responses.');
+        } else {
+          setTemplateHint(templateHintDefault);
+        }
+      } else {
+        templateManuallyDisabled = false;
+        setTemplateHint(templateHintDefault);
+      }
+    });
+  }
 
   const templates = {
     success: {
