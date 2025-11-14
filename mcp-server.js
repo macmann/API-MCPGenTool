@@ -24,7 +24,12 @@ export async function startStandaloneMcpServer(options = {}) {
   app.use(express.json());
 
   const basePath = options.basePath || '/mcp';
-  const port = Number(options.port || process.env.PORT || process.env.MCP_PORT || 3030);
+  const preferredPort = Number(options.port ?? process.env.PORT ?? process.env.MCP_PORT);
+  const basePort = Number.isInteger(preferredPort) && preferredPort > 0 ? preferredPort : 3030;
+  const preferredRetries = Number(
+    options.maxPortRetries ?? process.env.MCP_PORT_RETRIES ?? 5
+  );
+  const maxRetries = Number.isInteger(preferredRetries) && preferredRetries >= 0 ? preferredRetries : 5;
 
   mountMcp(app, {
     serverId: options.serverId,
@@ -32,16 +37,31 @@ export async function startStandaloneMcpServer(options = {}) {
     basePath
   });
 
+  let attemptPort = basePort;
+
   return new Promise((resolve, reject) => {
-    const server = app
-      .listen(port, () => {
-        console.log(`[MCP] Standalone listening on ${port}${basePath}`);
-        resolve(server);
-      })
-      .on('error', (err) => {
-        console.error('[MCP] Failed to start standalone server', err);
-        reject(err);
-      });
+    const tryListen = (remainingRetries) => {
+      const server = app
+        .listen(attemptPort, () => {
+          console.log(`[MCP] Standalone listening on ${attemptPort}${basePath}`);
+          resolve(server);
+        })
+        .on('error', (err) => {
+          if (err.code === 'EADDRINUSE' && remainingRetries > 0) {
+            console.warn(
+              `[MCP] Port ${attemptPort} in use, retrying with ${attemptPort + 1}`
+            );
+            attemptPort += 1;
+            setImmediate(() => tryListen(remainingRetries - 1));
+            return;
+          }
+
+          console.error('[MCP] Failed to start standalone server', err);
+          reject(err);
+        });
+    };
+
+    tryListen(maxRetries);
   });
 }
 
