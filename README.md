@@ -106,3 +106,89 @@ services:
       # Optional: DB_FILE override (still ephemeral on free tier)
       - key: DB_FILE
         value: mockapis.db
+
+# MCP Server (Model Context Protocol)
+
+This project can also run as an **MCP server** that exposes selected mock endpoints as tools to LLM clients (e.g. Claude desktop, OpenAI Apps SDK, custom agents).
+
+## 1. Configure an MCP server in the UI
+
+1. Start the web app as usual:
+
+   ```bash
+   npm install
+   ADMIN_KEY=my-secret npm run dev
+   # open http://localhost:3000/admin?key=my-secret
+   ```
+
+2. Go to **MCP Servers** in the admin sidebar (or open `/admin/mcp?key=...`).
+3. Click **New MCP Server** and fill in:
+   - **Name:** e.g. `Local Mock`
+   - **Base URL:** `http://localhost:3000` (or your Render URL)
+   - Optional API key header/value if your endpoints require it.
+   - Save.
+4. Click **Tools** for that MCP server and add tools:
+   - Choose an existing endpoint (e.g. `GET /user/:userid`).
+   - **Tool name:** `getUserDetails`
+   - **Arg schema (JSON):**
+
+     ```json
+     {
+       "type": "object",
+       "properties": {
+         "userid": {
+           "type": "string",
+           "description": "User ID"
+         }
+       },
+       "required": ["userid"]
+     }
+     ```
+
+## 2. Run the MCP server (stdio)
+
+In a separate terminal:
+
+```bash
+MCP_SERVER_ID=<the-id-from-DB> \
+MOCK_BASE_URL=http://localhost:3000 \
+npm run mcp-server
+```
+
+`MCP_SERVER_ID` is the ID of the MCP server row (shown in the MCP Servers list; you can also read it from SQLite).
+
+`MOCK_BASE_URL` is optional; if not set, the MCP server uses the Base URL from the MCP Server config.
+
+The MCP server will:
+
+- Register tools based on your MCP Tools config.
+- For each tool call, forward the request to the mapped mock endpoint and return the HTTP response as MCP tool output.
+
+## 3. Using with MCP clients
+
+You can point any MCP-capable client to this server via stdio, for example in a config:
+
+```json
+{
+  "mcpServers": {
+    "mock-api": {
+      "command": "node",
+      "args": [
+        "mcp-server.js"
+      ],
+      "env": {
+        "MCP_SERVER_ID": "<your-mcp-server-id>",
+        "MOCK_BASE_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+When the client connects, it will discover tools such as `getUserDetails` and can call them with JSON arguments like:
+
+```json
+{ "userid": "101" }
+```
+
+The MCP server will call your mock API (e.g. `GET /user/101`), and return the result.
