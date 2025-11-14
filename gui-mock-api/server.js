@@ -712,20 +712,25 @@ app.get('/admin/mcp/:id/info', requireAdmin, (req, res) => {
   const baseUrl = sanitizedBaseUrl || derivedBaseUrl;
   const baseUrlSource = sanitizedBaseUrl ? 'configured' : derivedBaseUrl ? 'derived' : 'none';
 
+  const mcpInternalPort = Number(process.env.MCP_PORT || 3030);
+  const mcpPublicUrl = (process.env.MCP_PUBLIC_URL || '').trim() || null;
+  const mcpInternalUrlHint = mcpPublicUrl || `http://localhost:${mcpInternalPort}`;
+  const shareBaseUrl = mcpPublicUrl || baseUrl;
+
   const authHeader = (s.api_key_header || '').trim();
   const authValue = (s.api_key_value || '').trim();
   const hasAuth = Boolean(authHeader && authValue);
 
   let curlExample = null;
   const firstTool = tools[0];
-  if (firstTool && baseUrl) {
+  if (firstTool && shareBaseUrl) {
     const method = String(firstTool.method || 'GET').toUpperCase();
     const placeholderPath = String(firstTool.path || '/').replace(/:([A-Za-z0-9_]+)/g, '<$1>');
     let curlUrl;
     try {
-      curlUrl = new URL(placeholderPath, baseUrl).toString();
+      curlUrl = new URL(placeholderPath, shareBaseUrl).toString();
     } catch (err) {
-      curlUrl = `${baseUrl}${placeholderPath.startsWith('/') ? '' : '/'}${placeholderPath}`;
+      curlUrl = `${shareBaseUrl}${placeholderPath.startsWith('/') ? '' : '/'}${placeholderPath}`;
     }
     const curlLines = [`curl -X ${method} '${curlUrl}'`];
     if (hasAuth) {
@@ -741,7 +746,7 @@ app.get('/admin/mcp/:id/info', requireAdmin, (req, res) => {
   const infoPayload = {
     id: s.id,
     name: s.name,
-    baseUrl,
+    baseUrl: shareBaseUrl,
     tools: tools.map((t) => ({
       name: t.name,
       method: String(t.method || '').toUpperCase(),
@@ -753,8 +758,8 @@ app.get('/admin/mcp/:id/info', requireAdmin, (req, res) => {
   }
 
   const connectionCommandParts = [`MCP_SERVER_ID=${s.id}`];
-  if (baseUrl) {
-    connectionCommandParts.push(`MOCK_BASE_URL=${baseUrl}`);
+  if (shareBaseUrl) {
+    connectionCommandParts.push(`MOCK_BASE_URL=${shareBaseUrl}`);
   }
   connectionCommandParts.push('node mcp-server.js');
   const connectionCommand = connectionCommandParts.join(' ');
@@ -770,7 +775,10 @@ app.get('/admin/mcp/:id/info', requireAdmin, (req, res) => {
     authValue,
     curlExample,
     connectionCommand,
-    infoPayload
+    infoPayload,
+    mcpInternalPort,
+    mcpInternalUrlHint,
+    mcpPublicUrl
   });
 });
 
