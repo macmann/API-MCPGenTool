@@ -2,6 +2,14 @@
 <p class="muted">Provide this information to trusted third parties that need to integrate with this MCP server.</p>
 
 <section>
+  <p>This MCP server runs inside the same process as your Mock API on port <code><%= mcpInternalPort %></code>.</p>
+  <p class="muted">Suggested MCP URL: <code><%= mcpInternalUrlHint %></code></p>
+  <% if (mcpPublicUrl) { %>
+    <p><strong>Public MCP URL:</strong> <code><%= mcpPublicUrl %></code></p>
+  <% } %>
+</section>
+
+<section>
   <h3>HTTP base configuration</h3>
   <% if (baseUrl) { %>
     <p>
