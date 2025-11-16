@@ -10,8 +10,7 @@
     "mcp-server": "node mcp-server.js",
     "db:migrate": "prisma migrate dev --name init",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio",
-    "db:seed": "node prisma/seed.js"
+    "db:studio": "prisma studio"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -39,8 +38,5 @@
   },
   "devDependencies": {
     "prisma": "^6.19.0"
-  },
-  "prisma": {
-    "seed": "node prisma/seed.js"
   }
 }
