@@ -8,6 +8,8 @@
   </div>
 </section>
 
+<% const enableToggleId = `mcp-enabled-${s.id || 'new'}`; %>
+
 <section class="surface-card surface-card--stacked">
   <form method="post" action="/admin/mcp/save?key=<%= encodeURIComponent(query?.key || '') %>" class="form-stack">
     <input type="hidden" name="id" value="<%= s.id || '' %>"/>
@@ -57,8 +59,8 @@
       </label>
     </div>
 
-    <label class="checkbox">
-      <input type="checkbox" name="is_enabled" value="true" <%= s.is_enabled ? 'checked' : '' %>/>
+    <label class="checkbox" for="<%= enableToggleId %>">
+      <input id="<%= enableToggleId %>" type="checkbox" name="is_enabled" value="true" <%= s.is_enabled ? 'checked' : '' %>/>
       <span>Enable this MCP server immediately</span>
     </label>
 

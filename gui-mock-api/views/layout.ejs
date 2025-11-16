@@ -473,37 +473,14 @@
       }
 
       label.checkbox input[type='checkbox'] {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
+        appearance: auto;
+        -webkit-appearance: auto;
+        -moz-appearance: auto;
         width: 1.25rem;
         height: 1.25rem;
         border-radius: 50%;
-        border: 2px solid rgba(13, 110, 253, 0.4);
-        background: #fff;
-        display: grid;
-        place-content: center;
-        cursor: pointer;
-        transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-      }
-
-      label.checkbox input[type='checkbox']::after {
-        content: '';
-        width: 0.55rem;
-        height: 0.55rem;
-        border-radius: 50%;
-        background: var(--brand-primary);
-        transform: scale(0);
-        transition: transform 0.15s ease;
-      }
-
-      label.checkbox input[type='checkbox']:checked {
-        border-color: var(--brand-primary);
-        background: rgba(13, 110, 253, 0.15);
-      }
-
-      label.checkbox input[type='checkbox']:checked::after {
-        transform: scale(1);
+        accent-color: var(--brand-primary);
+        flex-shrink: 0;
       }
 
       label.checkbox input[type='checkbox']:focus-visible {
