@@ -52,6 +52,10 @@
     "@prisma/client": "^6.19.0"
   },
   "devDependencies": {
-    "prisma": "^6.19.0"
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "prisma": "^6.19.0",
+    "typescript": "^5.9.3"
   }
 }
