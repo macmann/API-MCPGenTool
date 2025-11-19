@@ -4,6 +4,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from './auth.js';
 import { ensureDefaultProjectForUser, findProjectForUser } from './user-context.js';
 
+export function readApiKeyHeader(request) {
+  if (!request?.headers) return null;
+  const headerValue = request.headers.get('x-api-key') ?? request.headers.get('X-API-Key');
+  if (!headerValue) return null;
+  const trimmed = headerValue.trim();
+  return trimmed.length ? trimmed : null;
+}
+
 export async function requireUserSession() {
   const session = await getServerSession(authOptions);
   const userId = Number(session?.user?.id);
@@ -32,7 +40,22 @@ export async function resolveActiveProject(userId, request) {
 }
 
 export async function getRuntimeContext(request) {
-  const { userId, session } = await requireUserSession();
+  const session = await getServerSession(authOptions);
+  const userId = Number(session?.user?.id);
+  if (!userId) {
+    return null;
+  }
+
   const project = await resolveActiveProject(userId, request);
-  return { session, userId, project, projectId: project?.id };
+  if (!project) {
+    return null;
+  }
+
+  return {
+    session,
+    userId,
+    project,
+    projectId: project?.id,
+    authStrategy: 'session',
+  };
 }

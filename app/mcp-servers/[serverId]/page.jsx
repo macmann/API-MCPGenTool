@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Buffer } from 'buffer';
 
 import AppShell from '../../../components/dashboard/AppShell.jsx';
+import ApiKeyField from '../../../components/shared/ApiKeyField.jsx';
 import { getDashboardContext } from '../../../lib/dashboard-context.js';
 import prisma from '../../../lib/prisma.js';
 import { buildAbsoluteUrl, getMcpBaseUrl } from '../../../lib/url-utils.js';
@@ -117,16 +118,24 @@ function formatConnectionPayload(endpoint, auth) {
   return JSON.stringify(payload, null, 2);
 }
 
-function buildCurlCommand(endpoint, auth) {
-  const lines = [`curl -X POST '${endpoint}'`, "  -H 'Content-Type: application/json'"];
-  Object.entries(auth.headers).forEach(([key, value]) => {
-    lines.push(`  -H '${key}: ${value}'`);
-  });
-  const queryString = Object.entries(auth.query)
+function buildCurlCommand(endpoint, auth, requireApiKey, serverApiKey) {
+  const headers = auth.headers || {};
+  const queryParams = auth.query || {};
+  const queryString = Object.entries(queryParams)
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
     .join('&');
   const urlWithQuery = queryString ? `${endpoint}?${queryString}` : endpoint;
-  lines[0] = `curl -X POST '${urlWithQuery}'`;
+  const lines = [`curl -X POST '${urlWithQuery}'`, "  -H 'Content-Type: application/json'`];
+  if (requireApiKey) {
+    const resolvedApiKey = serverApiKey || headers['x-api-key'] || headers['X-API-Key'] || '<MCP_SERVER_API_KEY>';
+    lines.push(`  -H 'x-api-key: ${resolvedApiKey}'`);
+  }
+  Object.entries(headers).forEach(([key, value]) => {
+    if (key.toLowerCase() === 'x-api-key') {
+      return;
+    }
+    lines.push(`  -H '${key}: ${value}'`);
+  });
   lines.push("  -d '{\"jsonrpc\":\"2.0\",\"id\":\"list-tools\",\"method\":\"list_tools\"}'");
   return lines.join(' \\\n');
 }
@@ -155,8 +164,18 @@ export default async function McpServerDetailPage({ params, searchParams }) {
   const mcpBaseUrl = getMcpBaseUrl();
   const endpoint = buildAbsoluteUrl(mcpBaseUrl, `/mcp/${server.slug}`);
   const authSamples = buildAuthSamples(server.authConfig);
-  const connectionJson = formatConnectionPayload(endpoint, authSamples);
-  const curlCommand = buildCurlCommand(endpoint, authSamples);
+  const runtimeAuth = {
+    headers: { ...(authSamples.headers || {}) },
+    query: { ...(authSamples.query || {}) },
+  };
+  if (server.requireApiKey) {
+    runtimeAuth.headers['x-api-key'] = server.apiKey || '<MCP_SERVER_API_KEY>';
+  }
+  const connectionJson = formatConnectionPayload(endpoint, runtimeAuth);
+  const curlCommand = buildCurlCommand(endpoint, runtimeAuth, server.requireApiKey, server.apiKey);
+  const apiKeyHelper = server.requireApiKey
+    ? 'Distribute this value to MCP clients as the x-api-key header.'
+    : 'This MCP server accepts calls without the x-api-key header.';
 
   return (
     <AppShell session={session} projects={projects} activeProjectId={projectId}>
@@ -207,7 +226,15 @@ export default async function McpServerDetailPage({ params, searchParams }) {
                 <dt>Last updated</dt>
                 <dd>{formatDate(server.updatedAt)}</dd>
               </div>
+              <div>
+                <dt>Security</dt>
+                <dd>{server.requireApiKey ? 'x-api-key required' : 'Public (no API key)'}</dd>
+              </div>
             </dl>
+          </div>
+          <div className="detail-card">
+            <h3>API key</h3>
+            <ApiKeyField value={server.requireApiKey ? server.apiKey : ''} helperText={apiKeyHelper} />
           </div>
 
           <div className="detail-card">

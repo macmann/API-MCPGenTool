@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import AppShell from '../../../components/dashboard/AppShell.jsx';
+import ApiKeyField from '../../../components/shared/ApiKeyField.jsx';
 import { getDashboardContext } from '../../../lib/dashboard-context.js';
 import prisma from '../../../lib/prisma.js';
 import { formatRouteOpenApiDocument } from '../../../lib/mock-route-openapi.js';
@@ -50,7 +51,14 @@ function formatResponseBody(route) {
 
 function buildCurlCommand(route, url, headerEntries) {
   const lines = [`curl -X ${route.method} '${url}'`];
+  if (route.requireApiKey) {
+    const apiKeyValue = route.apiKey || '<ROUTE_API_KEY>';
+    lines.push(`  -H 'x-api-key: ${apiKeyValue}'`);
+  }
   headerEntries.forEach(([key, value]) => {
+    if (key.toLowerCase() === 'x-api-key') {
+      return;
+    }
     lines.push(`  -H '${key}: ${String(value)}'`);
   });
   if (route.responseIsJson) {
@@ -83,6 +91,9 @@ export default async function RouteDetailPage({ params, searchParams }) {
   const responseBody = formatResponseBody(route);
   const openApiSpec = formatRouteOpenApiDocument(route, { serverUrl: mockBaseUrl });
   const curlCommand = buildCurlCommand(route, fullUrl, matchHeaderEntries);
+  const apiKeyHelper = route.requireApiKey
+    ? 'Share this value with clients as the x-api-key header.'
+    : 'This route is public and does not require an x-api-key.';
 
   return (
     <AppShell session={session} projects={projects} activeProjectId={projectId}>
@@ -133,6 +144,10 @@ export default async function RouteDetailPage({ params, searchParams }) {
               <div>
                 <dt>Response delay</dt>
                 <dd>{route.responseDelayMs} ms</dd>
+              </div>
+              <div>
+                <dt>Security</dt>
+                <dd>{route.requireApiKey ? 'x-api-key required' : 'Public (no API key)'}</dd>
               </div>
             </dl>
           </div>
@@ -195,6 +210,10 @@ export default async function RouteDetailPage({ params, searchParams }) {
                 <dd>{formatDate(route.updatedAt)}</dd>
               </div>
             </dl>
+          </div>
+          <div className="detail-card">
+            <h3>API key</h3>
+            <ApiKeyField value={route.requireApiKey ? route.apiKey : ''} helperText={apiKeyHelper} />
           </div>
         </div>
 
