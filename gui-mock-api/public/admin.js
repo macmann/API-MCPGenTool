@@ -300,3 +300,44 @@
     });
   });
 })();
+
+(function () {
+  const checkboxInputs = document.querySelectorAll('label.checkbox input[type="checkbox"]');
+  if (!checkboxInputs.length) {
+    return;
+  }
+
+  checkboxInputs.forEach((input) => {
+    const label = input.closest('label.checkbox');
+
+    const syncLabelState = () => {
+      if (!label) return;
+      label.setAttribute('aria-checked', input.checked ? 'true' : 'false');
+    };
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      input.click();
+    });
+
+    if (!label) {
+      return;
+    }
+
+    label.setAttribute('role', 'checkbox');
+    syncLabelState();
+
+    label.addEventListener('click', (event) => {
+      if (event.target === input) {
+        syncLabelState();
+        return;
+      }
+      event.preventDefault();
+      input.focus();
+      input.click();
+    });
+
+    input.addEventListener('change', syncLabelState);
+  });
+})();
