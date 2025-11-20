@@ -8,41 +8,73 @@ MindBridge X provides a visual dashboard for crafting endpoints, a JSON-RPC brid
 
 ## Features
 
-- Visual endpoint builder with enable/disable toggles and request logging.
-- Handlebars-style templating for responses, with reusable environment and path parameter data.
-- MCP server management with per-tool JSON schemas and a single `/mcp/:slug` entrypoint.
-- CLI code scaffolding via OpenAI models (`npm run generate -- "prompt"`).
-- SQLite-backed persistence and production-friendly middleware (Helmet, compression, morgan).
+- **Visual endpoint builder**: Create REST routes with method, path, headers, delays, and status toggles. Built-in request logs help you trace payloads without leaving the dashboard.
+- **Templated responses**: Use Handlebars-style helpers with environment variables, path params, and reusable snippets to craft dynamic JSON bodies.
+- **MCP bridge**: Map your mock endpoints to MCP servers and tools with per-tool JSON schemas, then expose them under `/mcp/:slug` with automatic request validation and logging.
+- **Code generator CLI**: Stream OpenAI-powered scaffolds from natural-language prompts (`npm run generate -- "prompt"`).
+- **Secure persistence**: SQLite by default (or Postgres via `DATABASE_URL`), Prisma migrations, and NextAuth credential login gated by `ADMIN_KEY`.
+- **Operational middleware**: Helmet, compression, morgan logging, and a simple `/api/health` endpoint for liveness probes.
 
-## Quickstart
+## Installation
 
-1. Copy the environment template and adjust values as needed:
-   ```bash
-   cp .env.example .env
-   ```
-   For local development, the defaults use SQLite via `DATABASE_URL="file:./prisma/dev.db"` and a credentials-based NextAuth setup.
-2. Install dependencies:
+### Requirements
+
+- Node.js 18 or later
+- npm 9 or later
+
+### Setup
+
+1. Install dependencies:
    ```bash
    npm install
    ```
-3. Apply the initial Prisma migrations (creates the SQLite dev database by default). Prisma reads `DATABASE_URL`, so point it at Postgres if you prefer parity with production:
+2. Copy the sample environment and adjust values (especially `ADMIN_KEY`, `NEXTAUTH_SECRET`, and `OPENAI_API_KEY` if you plan to use the generator):
+   ```bash
+   cp .env.example .env
+   ```
+   The defaults target SQLite via `DATABASE_URL="file:./prisma/dev.db"`. Point this to Postgres for production parity.
+3. Create or update the database schema with Prisma (uses `DATABASE_URL`):
    ```bash
    npm run db:migrate
    ```
-4. Start the Next.js app:
-   ```bash
-   npm run dev
-   ```
-5. Visit `http://localhost:3000/login` and sign in with the default admin credentials (`admin@example.com` / `password`) to begin creating projects and MCP mappings.
 
-## Example Usage
+## Usage
 
-- **Create endpoints**: From the admin dashboard, define method, path, status, headers, delays, and templated payloads. New endpoints go live immediately under the configured paths (e.g., `/api/users`).
-- **Use the code generator**: Run `npm run generate -- "Write a function in JavaScript that reverses a string."` to stream code suggestions from your configured OpenAI model.
-- **Expose endpoints via MCP**: Configure a server and tools in the MCP section, then POST JSON-RPC requests to `http://localhost:3000/mcp/<slug>`; the base `/mcp` proxies to the default slug.
-- **Inspect logs**: Review captured request/response logs per endpoint for quick debugging.
+### Run the web dashboard and mock API
+
+Start the Next.js app (includes the admin UI and mock API routes):
+
+```bash
+npm run dev
+```
+
+Then open `http://localhost:3000/login` and sign in with the default admin credentials (`admin@example.com` / `password`). From here you can create projects, endpoints, and MCP mappings.
+
+For a production-style start that serves the compiled app, run:
+
+```bash
+npm run build
+npm run start
+```
+
+### Use the MCP JSON-RPC bridge
+
+1. In the dashboard, create an MCP server and add tools that point at your mock endpoints.
+2. Send JSON-RPC 2.0 requests to `POST http://localhost:3000/mcp/<slug>`; the base `/mcp` proxies to the default slug.
+3. Health check: `GET http://localhost:3000/mcp/<slug>` returns a basic status payload.
+
+### Generate code with OpenAI
+
+Use the CLI to scaffold snippets from natural-language prompts (requires `OPENAI_API_KEY`):
+
+```bash
+npm run generate -- "Write a function that parses a CSV string into objects"
+```
+
+The command streams responses to stdout so you can copy/paste the generated code.
 
 ## Architecture
+
 
 ```
 API-MCPGenTool/
